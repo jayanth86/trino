@@ -15,43 +15,44 @@ package io.trino.plugin.lakehouse;
 
 import io.trino.testing.BaseConnectorSmokeTest;
 import io.trino.testing.QueryRunner;
-import io.trino.testing.containers.MotoContainer;
+import io.trino.testing.containers.FlociContainer;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
 
 import static io.trino.plugin.tpch.TpchMetadata.TINY_SCHEMA_NAME;
 import static io.trino.testing.QueryAssertions.copyTpchTables;
-import static io.trino.testing.containers.MotoContainer.MOTO_ACCESS_KEY;
-import static io.trino.testing.containers.MotoContainer.MOTO_REGION;
-import static io.trino.testing.containers.MotoContainer.MOTO_SECRET_KEY;
+import static io.trino.testing.TestingNames.randomNameSuffix;
+import static io.trino.testing.containers.FlociContainer.FLOCI_ACCESS_KEY;
+import static io.trino.testing.containers.FlociContainer.FLOCI_REGION;
+import static io.trino.testing.containers.FlociContainer.FLOCI_SECRET_KEY;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.TestInstance.Lifecycle.PER_CLASS;
 
 @TestInstance(PER_CLASS)
-public class TestLakehouseMotoConnectorSmokeTest
+public class TestLakehouseFlociConnectorSmokeTest
         extends BaseConnectorSmokeTest
 {
     @Override
     protected QueryRunner createQueryRunner()
             throws Exception
     {
-        MotoContainer moto = closeAfterClass(new MotoContainer());
-        moto.start();
-        moto.createBucket("test-bucket");
+        FlociContainer floci = closeAfterClass(new FlociContainer());
+        floci.start();
+        floci.createBucket("test-bucket");
 
         return LakehouseQueryRunner.builder()
                 .addLakehouseProperty("hive.metastore", "glue")
-                .addLakehouseProperty("hive.metastore.glue.region", MOTO_REGION)
-                .addLakehouseProperty("hive.metastore.glue.endpoint-url", moto.getEndpoint().toString())
-                .addLakehouseProperty("hive.metastore.glue.aws-access-key", MOTO_ACCESS_KEY)
-                .addLakehouseProperty("hive.metastore.glue.aws-secret-key", MOTO_SECRET_KEY)
+                .addLakehouseProperty("hive.metastore.glue.region", FLOCI_REGION)
+                .addLakehouseProperty("hive.metastore.glue.endpoint-url", floci.endpoint().toString())
+                .addLakehouseProperty("hive.metastore.glue.aws-access-key", FLOCI_ACCESS_KEY)
+                .addLakehouseProperty("hive.metastore.glue.aws-secret-key", FLOCI_SECRET_KEY)
                 .addLakehouseProperty("hive.metastore.glue.default-warehouse-dir", "s3://test-bucket/")
                 .addLakehouseProperty("fs.s3.enabled", "true")
-                .addLakehouseProperty("s3.region", MOTO_REGION)
-                .addLakehouseProperty("s3.endpoint", moto.getEndpoint().toString())
-                .addLakehouseProperty("s3.aws-access-key", MOTO_ACCESS_KEY)
-                .addLakehouseProperty("s3.aws-secret-key", MOTO_SECRET_KEY)
+                .addLakehouseProperty("s3.region", FLOCI_REGION)
+                .addLakehouseProperty("s3.endpoint", floci.endpoint().toString())
+                .addLakehouseProperty("s3.aws-access-key", FLOCI_ACCESS_KEY)
+                .addLakehouseProperty("s3.aws-secret-key", FLOCI_SECRET_KEY)
                 .addLakehouseProperty("s3.path-style-access", "true")
                 .build();
     }
@@ -61,6 +62,16 @@ public class TestLakehouseMotoConnectorSmokeTest
     {
         computeActual("CREATE SCHEMA lakehouse.tpch WITH (location='s3://test-bucket/tpch')");
         copyTpchTables(getQueryRunner(), "tpch", TINY_SCHEMA_NAME, REQUIRED_TPCH_TABLES);
+    }
+
+    @Test
+    @Override
+    public void testRenameSchema()
+    {
+        String schemaName = getSession().getSchema().orElseThrow();
+        assertQueryFails(
+                "ALTER SCHEMA %s RENAME TO %s".formatted(schemaName, schemaName + "_" + randomNameSuffix()),
+                ".*Database cannot be renamed.*");
     }
 
     @Test

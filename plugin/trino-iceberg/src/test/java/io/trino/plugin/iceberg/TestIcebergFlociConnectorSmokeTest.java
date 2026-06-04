@@ -16,11 +16,9 @@ package io.trino.plugin.iceberg;
 import com.google.common.collect.ImmutableMap;
 import io.trino.filesystem.Location;
 import io.trino.testing.QueryRunner;
-import io.trino.testing.containers.MotoContainer;
+import io.trino.testing.containers.FlociContainer;
 import org.apache.iceberg.FileFormat;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.parallel.Execution;
 import software.amazon.awssdk.services.glue.GlueClient;
 
 import java.io.IOException;
@@ -29,21 +27,19 @@ import java.util.Map;
 
 import static io.trino.plugin.iceberg.IcebergTestUtils.checkParquetFileSorting;
 import static io.trino.testing.TestingNames.randomNameSuffix;
-import static io.trino.testing.containers.MotoContainer.MOTO_ACCESS_KEY;
-import static io.trino.testing.containers.MotoContainer.MOTO_REGION;
-import static io.trino.testing.containers.MotoContainer.MOTO_SECRET_KEY;
+import static io.trino.testing.containers.FlociContainer.FLOCI_ACCESS_KEY;
+import static io.trino.testing.containers.FlociContainer.FLOCI_REGION;
+import static io.trino.testing.containers.FlociContainer.FLOCI_SECRET_KEY;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.junit.jupiter.api.parallel.ExecutionMode.SAME_THREAD;
 
-@Execution(SAME_THREAD) // Moto is not concurrency safe
-public class TestIcebergMotoConnectorSmokeTest
+public class TestIcebergFlociConnectorSmokeTest
         extends BaseIcebergConnectorSmokeTest
 {
     private final String bucketName = "test-iceberg-" + randomNameSuffix();
     private final String schemaName = "test_iceberg_smoke_" + randomNameSuffix();
     private GlueClient glueClient;
 
-    public TestIcebergMotoConnectorSmokeTest()
+    public TestIcebergFlociConnectorSmokeTest()
     {
         super(FileFormat.PARQUET);
     }
@@ -52,26 +48,26 @@ public class TestIcebergMotoConnectorSmokeTest
     protected QueryRunner createQueryRunner()
             throws Exception
     {
-        MotoContainer moto = closeAfterClass(new MotoContainer());
-        moto.start();
-        moto.createBucket(bucketName);
+        FlociContainer floci = closeAfterClass(new FlociContainer());
+        floci.start();
+        floci.createBucket(bucketName);
 
-        glueClient = closeAfterClass(GlueClient.builder().applyMutation(moto::updateClient).build());
+        glueClient = closeAfterClass(GlueClient.builder().applyMutation(floci::updateClient).build());
 
         return IcebergQueryRunner.builder()
                 .setIcebergProperties(ImmutableMap.<String, String>builder()
                         .put("iceberg.file-format", format.name())
                         .put("iceberg.catalog.type", "glue")
-                        .put("hive.metastore.glue.region", MOTO_REGION)
-                        .put("hive.metastore.glue.endpoint-url", moto.getEndpoint().toString())
-                        .put("hive.metastore.glue.aws-access-key", MOTO_ACCESS_KEY)
-                        .put("hive.metastore.glue.aws-secret-key", MOTO_SECRET_KEY)
+                        .put("hive.metastore.glue.region", FLOCI_REGION)
+                        .put("hive.metastore.glue.endpoint-url", floci.endpoint().toString())
+                        .put("hive.metastore.glue.aws-access-key", FLOCI_ACCESS_KEY)
+                        .put("hive.metastore.glue.aws-secret-key", FLOCI_SECRET_KEY)
                         .put("hive.metastore.glue.default-warehouse-dir", "s3://%s/".formatted(bucketName))
                         .put("fs.s3.enabled", "true")
-                        .put("s3.region", MOTO_REGION)
-                        .put("s3.endpoint", moto.getEndpoint().toString())
-                        .put("s3.aws-access-key", MOTO_ACCESS_KEY)
-                        .put("s3.aws-secret-key", MOTO_SECRET_KEY)
+                        .put("s3.region", FLOCI_REGION)
+                        .put("s3.endpoint", floci.endpoint().toString())
+                        .put("s3.aws-access-key", FLOCI_ACCESS_KEY)
+                        .put("s3.aws-secret-key", FLOCI_SECRET_KEY)
                         .put("s3.path-style-access", "true")
                         .put("iceberg.register-table-procedure.enabled", "true")
                         .buildOrThrow())
@@ -129,11 +125,6 @@ public class TestIcebergMotoConnectorSmokeTest
             throw new UncheckedIOException(e);
         }
     }
-
-    @Test
-    @Disabled("Moto is not concurrency safe")
-    @Override
-    public void testDeleteRowsConcurrently() {}
 
     @Test
     @Override
