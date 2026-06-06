@@ -55,7 +55,7 @@ public abstract class BaseHiveS3AndGlue
             throws Exception
     {
         Session session = createSession(Optional.of(new SelectedRole(ROLE, Optional.of("admin"))));
-        HiveQueryRunner.Builder<?> queryRunnerBuilder = HiveQueryRunner.builder(session)
+        QueryRunner queryRunner = HiveQueryRunner.builder(session)
                 .addExtraProperty("sql.path", "hive.functions")
                 .addExtraProperty("sql.default-function-catalog", "hive")
                 .addExtraProperty("sql.default-function-schema", "functions")
@@ -64,9 +64,9 @@ public abstract class BaseHiveS3AndGlue
                 .addHiveProperty("hive.metastore.glue.default-warehouse-dir", schemaPath())
                 .addHiveProperty("hive.security", "allow-all")
                 .addHiveProperty("hive.non-managed-table-writes-enabled", "true")
-                .addHiveProperty("fs.s3.enabled", "true");
-        s3AndGlueProperties().forEach(queryRunnerBuilder::addHiveProperty);
-        QueryRunner queryRunner = queryRunnerBuilder.build();
+                .addHiveProperty("fs.s3.enabled", "true")
+                .apply(builder -> s3AndGlueProperties().forEach(builder::addHiveProperty))
+                .build();
         queryRunner.execute("CREATE SCHEMA " + schemaName + " WITH (location = '" + schemaPath() + "')");
         queryRunner.execute("CREATE SCHEMA IF NOT EXISTS functions");
 

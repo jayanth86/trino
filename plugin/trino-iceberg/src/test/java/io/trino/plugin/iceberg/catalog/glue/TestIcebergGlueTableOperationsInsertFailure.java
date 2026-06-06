@@ -43,7 +43,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Optional;
 
-import static io.trino.plugin.hive.metastore.glue.TestingGlueHiveMetastore.createTestingGlueHiveMetastore;
 import static io.trino.testing.TestingNames.randomNameSuffix;
 import static io.trino.testing.TestingSession.testSessionBuilder;
 import static java.lang.String.format;
@@ -85,7 +84,7 @@ public class TestIcebergGlueTableOperationsInsertFailure
                 .putAll(floci.glueProperties())
                 .buildOrThrow());
 
-        glueHiveMetastore = createTestingGlueHiveMetastore(dataDirectory.toUri(), this::closeAfterClass, false, floci::configureGlueHiveMetastore);
+        glueHiveMetastore = floci.createGlueHiveMetastore(dataDirectory.toUri(), this::closeAfterClass, false);
 
         Database database = Database.builder()
                 .setDatabaseName(schemaName)

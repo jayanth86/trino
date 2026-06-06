@@ -15,7 +15,7 @@ package io.trino.plugin.deltalake.metastore.glue;
 
 import com.google.common.collect.ImmutableMap;
 import io.trino.plugin.deltalake.DeltaLakeQueryRunner;
-import io.trino.plugin.hive.FlociS3AndGlueTestSupport;
+import io.trino.plugin.hive.FlociS3AndGlue;
 import io.trino.testing.AbstractTestQueryFramework;
 import io.trino.testing.QueryRunner;
 import org.junit.jupiter.api.AfterAll;
@@ -35,7 +35,7 @@ import static org.junit.jupiter.api.TestInstance.Lifecycle.PER_CLASS;
 public class TestDeltaLakeRenameToWithGlueMetastore
         extends AbstractTestQueryFramework
 {
-    private FlociS3AndGlueTestSupport floci;
+    private FlociS3AndGlue floci;
 
     @Override
     protected QueryRunner createQueryRunner()
@@ -43,8 +43,7 @@ public class TestDeltaLakeRenameToWithGlueMetastore
     {
         Path warehouseDir = Files.createTempDirectory("warehouse-dir");
         closeAfterClass(() -> deleteRecursively(warehouseDir, ALLOW_INSECURE));
-        floci = closeAfterClass(new FlociS3AndGlueTestSupport());
-        floci.start();
+        floci = closeAfterClass(new FlociS3AndGlue());
         return DeltaLakeQueryRunner.builder("test_delta_lake_rename_to_with_glue_" + randomNameSuffix())
                 .setDeltaProperties(ImmutableMap.<String, String>builder()
                         .put("hive.metastore", "glue")

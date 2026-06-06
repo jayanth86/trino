@@ -13,9 +13,10 @@
  */
 package io.trino.plugin.iceberg.catalog.glue;
 
-import io.trino.plugin.hive.metastore.glue.GlueHiveMetastoreConfig;
+import io.trino.plugin.hive.metastore.glue.GlueHiveMetastore;
 import software.amazon.awssdk.services.s3.S3Client;
 
+import java.net.URI;
 import java.util.Map;
 
 import static io.trino.testing.TestingNames.randomNameSuffix;
@@ -35,9 +36,9 @@ public class TestIcebergS3AndGlueFloci
     }
 
     @Override
-    protected void configureGlueHiveMetastore(GlueHiveMetastoreConfig config)
+    protected GlueHiveMetastore createGlueHiveMetastore()
     {
-        floci().configureGlueHiveMetastore(config);
+        return floci().createGlueHiveMetastore(URI.create(schemaPath()), this::closeAfterClass, false);
     }
 
     @Override

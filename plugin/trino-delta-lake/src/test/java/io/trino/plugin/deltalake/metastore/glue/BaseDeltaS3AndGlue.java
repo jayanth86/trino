@@ -17,7 +17,7 @@ import com.google.common.collect.ImmutableMap;
 import io.trino.plugin.deltalake.DeltaLakeQueryRunner;
 import io.trino.plugin.hive.BaseS3AndGlueTest;
 import io.trino.plugin.hive.FlociS3AndGlue;
-import io.trino.plugin.hive.metastore.glue.GlueHiveMetastoreConfig;
+import io.trino.plugin.hive.metastore.glue.GlueHiveMetastore;
 import io.trino.testing.QueryRunner;
 
 import java.net.URI;
@@ -44,7 +44,7 @@ public abstract class BaseDeltaS3AndGlue
     protected QueryRunner createQueryRunner()
             throws Exception
     {
-        metastore = createTestingGlueHiveMetastore(URI.create(schemaPath()), this::closeAfterClass, false, this::configureGlueHiveMetastore);
+        metastore = createGlueHiveMetastore();
         return DeltaLakeQueryRunner.builder(schemaName)
                 .setDeltaProperties(ImmutableMap.<String, String>builder()
                         .put("hive.metastore", "glue")
@@ -62,7 +62,10 @@ public abstract class BaseDeltaS3AndGlue
         return Map.of();
     }
 
-    protected void configureGlueHiveMetastore(GlueHiveMetastoreConfig config) {}
+    protected GlueHiveMetastore createGlueHiveMetastore()
+    {
+        return createTestingGlueHiveMetastore(URI.create(schemaPath()), this::closeAfterClass);
+    }
 
     protected final FlociS3AndGlue floci()
     {

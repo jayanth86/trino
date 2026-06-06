@@ -44,7 +44,7 @@ final class TestGlueHiveMetastoreSkipArchive
         floci = closeAfterClass(new FlociS3AndGlue());
         glueClient = closeAfterClass(floci.createGlueClient());
 
-        HiveQueryRunner.Builder<?> builder = HiveQueryRunner.builder(testSessionBuilder()
+        DistributedQueryRunner queryRunner = HiveQueryRunner.builder(testSessionBuilder()
                         .setCatalog("hive")
                         .setSchema(testSchema)
                         .build())
@@ -52,10 +52,9 @@ final class TestGlueHiveMetastoreSkipArchive
                 .addHiveProperty("hive.metastore.glue.default-warehouse-dir", "local:///glue")
                 .addHiveProperty("hive.security", "allow-all")
                 .addHiveProperty("hive.metastore.glue.skip-archive", "true")
-                .setCreateTpchSchemas(false);
-        floci.glueProperties().forEach(builder::addHiveProperty);
-
-        DistributedQueryRunner queryRunner = builder.build();
+                .setCreateTpchSchemas(false)
+                .apply(builder -> floci.glueProperties().forEach(builder::addHiveProperty))
+                .build();
         queryRunner.execute("CREATE SCHEMA " + testSchema);
         return queryRunner;
     }

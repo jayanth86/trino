@@ -38,7 +38,6 @@ import java.nio.file.Path;
 import java.util.List;
 import java.util.Set;
 
-import static io.trino.plugin.hive.metastore.glue.TestingGlueHiveMetastore.createTestingGlueHiveMetastore;
 import static io.trino.plugin.tpch.TpchMetadata.TINY_SCHEMA_NAME;
 import static io.trino.testing.QueryAssertions.copyTpchTables;
 import static io.trino.testing.TestingNames.randomNameSuffix;
@@ -78,7 +77,7 @@ public class TestHiveGlueMetadataListing
 
         floci = closeAfterClass(new FlociS3AndGlue());
 
-        this.glueMetastore = createTestingGlueHiveMetastore(dataDirectory.toUri(), this::closeAfterClass, false, floci::configureGlueHiveMetastore);
+        this.glueMetastore = floci.createGlueHiveMetastore(dataDirectory.toUri(), this::closeAfterClass, false);
         queryRunner.installPlugin(new TestingHivePlugin(dataDirectory, glueMetastore));
         queryRunner.createCatalog(HIVE_CATALOG, "hive", ImmutableMap.of("fs.hadoop.enabled", "true"));
 

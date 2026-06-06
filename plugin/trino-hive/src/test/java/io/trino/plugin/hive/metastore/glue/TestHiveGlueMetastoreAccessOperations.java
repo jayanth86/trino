@@ -85,17 +85,16 @@ public class TestHiveGlueMetastoreAccessOperations
     {
         floci = closeAfterClass(new FlociS3AndGlue());
 
-        HiveQueryRunner.Builder<?> builder = HiveQueryRunner.builder(testSessionBuilder()
+        DistributedQueryRunner queryRunner = HiveQueryRunner.builder(testSessionBuilder()
                         .setCatalog("hive")
                         .setSchema(testSchema)
                         .build())
                 .addHiveProperty("hive.metastore", "glue")
                 .addHiveProperty("hive.metastore.glue.default-warehouse-dir", "local:///glue")
                 .addHiveProperty("hive.security", "allow-all")
-                .setCreateTpchSchemas(false);
-        floci.glueProperties().forEach(builder::addHiveProperty);
-
-        DistributedQueryRunner queryRunner = builder.build();
+                .setCreateTpchSchemas(false)
+                .apply(builder -> floci.glueProperties().forEach(builder::addHiveProperty))
+                .build();
         queryRunner.execute("CREATE SCHEMA " + testSchema);
         schemaDir = queryRunner.getCoordinator().getBaseDataDir().resolve("hive_data").resolve("glue").resolve(testSchema);
         glueStats = getConnectorService(queryRunner, GlueHiveMetastore.class).getStats();

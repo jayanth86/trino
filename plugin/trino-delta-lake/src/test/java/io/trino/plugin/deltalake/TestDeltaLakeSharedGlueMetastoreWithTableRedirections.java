@@ -15,7 +15,7 @@ package io.trino.plugin.deltalake;
 
 import com.google.common.collect.ImmutableMap;
 import io.trino.Session;
-import io.trino.plugin.hive.FlociS3AndGlueTestSupport;
+import io.trino.plugin.hive.FlociS3AndGlue;
 import io.trino.plugin.hive.TestingHivePlugin;
 import io.trino.plugin.hive.metastore.glue.GlueHiveMetastore;
 import io.trino.testing.DistributedQueryRunner;
@@ -38,7 +38,6 @@ import software.amazon.awssdk.services.glue.model.TableInput;
 import java.nio.file.Path;
 import java.util.Map;
 
-import static io.trino.plugin.hive.metastore.glue.TestingGlueHiveMetastore.createTestingGlueHiveMetastore;
 import static io.trino.testing.TestingNames.randomNameSuffix;
 import static io.trino.testing.TestingSession.testSessionBuilder;
 import static java.lang.String.format;
@@ -57,7 +56,7 @@ public class TestDeltaLakeSharedGlueMetastoreWithTableRedirections
     private Path dataDirectory;
     private String schemaLocation;
     private GlueHiveMetastore glueMetastore;
-    private FlociS3AndGlueTestSupport floci;
+    private FlociS3AndGlue floci;
 
     @Override
     protected QueryRunner createQueryRunner()
@@ -72,8 +71,7 @@ public class TestDeltaLakeSharedGlueMetastoreWithTableRedirections
 
         this.dataDirectory = queryRunner.getCoordinator().getBaseDataDir().resolve("delta_lake_data");
         this.schemaLocation = dataDirectory.toUri().toString();
-        this.floci = closeAfterClass(new FlociS3AndGlueTestSupport());
-        floci.start();
+        this.floci = closeAfterClass(new FlociS3AndGlue());
 
         queryRunner.installPlugin(new DeltaLakePlugin());
         queryRunner.createCatalog(
@@ -87,7 +85,7 @@ public class TestDeltaLakeSharedGlueMetastoreWithTableRedirections
                         .putAll(floci.glueProperties())
                         .buildOrThrow());
 
-        this.glueMetastore = createTestingGlueHiveMetastore(dataDirectory.toUri(), this::closeAfterClass, false, floci::configureGlueHiveMetastore);
+        this.glueMetastore = floci.createGlueHiveMetastore(dataDirectory.toUri(), this::closeAfterClass, false);
         queryRunner.installPlugin(new TestingHivePlugin(queryRunner.getCoordinator().getBaseDataDir().resolve("hive_data"), glueMetastore));
         queryRunner.createCatalog(
                 "hive_with_redirections",

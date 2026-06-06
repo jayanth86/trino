@@ -36,7 +36,7 @@ import io.trino.plugin.deltalake.DeltaLakeMetadataFactory;
 import io.trino.plugin.deltalake.DeltaLakeModule;
 import io.trino.plugin.deltalake.DeltaLakeSecurityModule;
 import io.trino.plugin.deltalake.metastore.DeltaLakeMetastoreModule;
-import io.trino.plugin.hive.FlociS3AndGlueTestSupport;
+import io.trino.plugin.hive.FlociS3AndGlue;
 import io.trino.spi.TrinoException;
 import io.trino.spi.connector.ConnectorContext;
 import io.trino.spi.connector.RelationColumnsMetadata;
@@ -95,7 +95,7 @@ public class TestDeltaLakeGlueMetastore
     private DeltaLakeMetadataFactory metadataFactory;
     private String databaseName;
     private TestingConnectorSession session;
-    private FlociS3AndGlueTestSupport floci;
+    private FlociS3AndGlue floci;
 
     @BeforeAll
     public void setUp()
@@ -103,8 +103,7 @@ public class TestDeltaLakeGlueMetastore
     {
         tempDir = Files.createTempDirectory(null).toFile();
         String temporaryLocation = tempDir.toURI().toString();
-        floci = new FlociS3AndGlueTestSupport();
-        floci.start();
+        floci = new FlociS3AndGlue();
 
         Map<String, String> config = ImmutableMap.<String, String>builder()
                 .put("hive.metastore", "glue")

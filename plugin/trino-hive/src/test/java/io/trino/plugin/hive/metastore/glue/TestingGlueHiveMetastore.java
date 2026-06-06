@@ -61,15 +61,9 @@ public final class TestingGlueHiveMetastore
 
     public static GlueHiveMetastore createTestingGlueHiveMetastore(URI warehouseUri, Consumer<AutoCloseable> registerResource, boolean assumeCanonicalPartitionKeys)
     {
-        return createTestingGlueHiveMetastore(warehouseUri, registerResource, assumeCanonicalPartitionKeys, _ -> {});
-    }
-
-    public static GlueHiveMetastore createTestingGlueHiveMetastore(URI warehouseUri, Consumer<AutoCloseable> registerResource, boolean assumeCanonicalPartitionKeys, Consumer<GlueHiveMetastoreConfig> configureGlueConfig)
-    {
         GlueHiveMetastoreConfig glueConfig = new GlueHiveMetastoreConfig()
                 .setDefaultWarehouseDir(warehouseUri.toString())
                 .setAssumeCanonicalPartitionKeys(assumeCanonicalPartitionKeys);
-        configureGlueConfig.accept(glueConfig);
         GlueClient glueClient = createGlueClient(glueConfig, ImmutableSet.of());
         registerResource.accept(glueClient);
         return new GlueHiveMetastore(

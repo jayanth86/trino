@@ -52,7 +52,6 @@ import static io.trino.plugin.hive.HiveStorageFormat.PARQUET;
 import static io.trino.plugin.hive.TableType.EXTERNAL_TABLE;
 import static io.trino.plugin.hive.metastore.glue.PartitionFilterBuilder.DECIMAL_TYPE_PRECISION;
 import static io.trino.plugin.hive.metastore.glue.PartitionFilterBuilder.DECIMAL_TYPE_SCALE;
-import static io.trino.plugin.hive.metastore.glue.TestingGlueHiveMetastore.createTestingGlueHiveMetastore;
 import static io.trino.testing.TestingNames.randomNameSuffix;
 import static java.nio.file.Files.createTempDirectory;
 import static java.util.stream.Collectors.joining;
@@ -76,7 +75,7 @@ final class TestGlueHiveMetastoreCanonicalPartitionKeys
     {
         tempDir = createTempDirectory("test");
         floci = closer.register(new FlociS3AndGlue());
-        metastore = createTestingGlueHiveMetastore(tempDir.toUri(), closer::register, true, floci::configureGlueHiveMetastore);
+        metastore = floci.createGlueHiveMetastore(tempDir.toUri(), closer::register, true);
     }
 
     @BeforeAll

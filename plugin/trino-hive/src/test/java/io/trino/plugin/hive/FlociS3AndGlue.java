@@ -14,12 +14,22 @@
 package io.trino.plugin.hive;
 
 import com.google.common.collect.ImmutableMap;
+import io.trino.plugin.hive.metastore.glue.GlueCache;
+import io.trino.plugin.hive.metastore.glue.GlueHiveMetastore;
+import io.trino.plugin.hive.metastore.glue.GlueHiveMetastore.TableKind;
 import io.trino.plugin.hive.metastore.glue.GlueHiveMetastoreConfig;
+import io.trino.plugin.hive.metastore.glue.GlueMetastoreStats;
+import io.trino.spi.catalog.CatalogName;
 import io.trino.testing.containers.FlociContainer;
 import software.amazon.awssdk.services.glue.GlueClient;
 import software.amazon.awssdk.services.s3.S3Client;
 
+import java.net.URI;
+import java.util.EnumSet;
 import java.util.Map;
+import java.util.function.Consumer;
+
+import static io.trino.hdfs.HdfsTestUtils.HDFS_FILE_SYSTEM_FACTORY;
 
 public final class FlociS3AndGlue
         implements AutoCloseable
@@ -28,6 +38,7 @@ public final class FlociS3AndGlue
 
     public FlociS3AndGlue()
     {
+        floci.start();
     }
 
     public void createBucket(String bucketName)
@@ -77,6 +88,24 @@ public final class FlociS3AndGlue
                 .setGlueRegion(FlociContainer.FLOCI_REGION)
                 .setAwsAccessKey(FlociContainer.FLOCI_ACCESS_KEY)
                 .setAwsSecretKey(FlociContainer.FLOCI_SECRET_KEY);
+    }
+
+    public GlueHiveMetastore createGlueHiveMetastore(URI warehouseUri, Consumer<AutoCloseable> registerResource, boolean assumeCanonicalPartitionKeys)
+    {
+        GlueHiveMetastoreConfig glueConfig = new GlueHiveMetastoreConfig()
+                .setDefaultWarehouseDir(warehouseUri.toString())
+                .setAssumeCanonicalPartitionKeys(assumeCanonicalPartitionKeys);
+        configureGlueHiveMetastore(glueConfig);
+        GlueClient glueClient = createGlueClient();
+        registerResource.accept(glueClient);
+        return new GlueHiveMetastore(
+                glueClient,
+                GlueCache.NOOP,
+                new GlueMetastoreStats(),
+                HDFS_FILE_SYSTEM_FACTORY,
+                glueConfig,
+                new CatalogName("test"),
+                EnumSet.allOf(TableKind.class));
     }
 
     @Override

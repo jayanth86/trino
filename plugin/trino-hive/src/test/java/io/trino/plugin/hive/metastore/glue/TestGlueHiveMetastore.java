@@ -24,7 +24,6 @@ import java.nio.file.Path;
 
 import static com.google.common.io.MoreFiles.deleteRecursively;
 import static com.google.common.io.RecursiveDeleteOption.ALLOW_INSECURE;
-import static io.trino.plugin.hive.metastore.glue.TestingGlueHiveMetastore.createTestingGlueHiveMetastore;
 import static java.nio.file.Files.createTempDirectory;
 
 final class TestGlueHiveMetastore
@@ -40,7 +39,7 @@ final class TestGlueHiveMetastore
     {
         tempDir = createTempDirectory("test");
         floci = closer.register(new FlociS3AndGlue());
-        metastore = createTestingGlueHiveMetastore(tempDir.toUri(), closer::register, false, floci::configureGlueHiveMetastore);
+        metastore = floci.createGlueHiveMetastore(tempDir.toUri(), closer::register, false);
     }
 
     @AfterAll

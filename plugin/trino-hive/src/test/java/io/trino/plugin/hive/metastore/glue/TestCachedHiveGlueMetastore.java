@@ -61,7 +61,7 @@ public class TestCachedHiveGlueMetastore
     {
         floci = closeAfterClass(new FlociS3AndGlue());
 
-        HiveQueryRunner.Builder<?> builder = HiveQueryRunner.builder(testSessionBuilder()
+        DistributedQueryRunner queryRunner = HiveQueryRunner.builder(testSessionBuilder()
                         .setCatalog("hive")
                         .setSchema(testSchema)
                         .build())
@@ -71,10 +71,9 @@ public class TestCachedHiveGlueMetastore
                 .addHiveProperty("hive.metastore-cache-ttl", "1d")
                 .addHiveProperty("hive.metastore-refresh-interval", "1h")
                 .addHiveProperty("hive.security", "allow-all")
-                .setCreateTpchSchemas(false);
-        floci.glueProperties().forEach(builder::addHiveProperty);
-
-        DistributedQueryRunner queryRunner = builder.build();
+                .setCreateTpchSchemas(false)
+                .apply(builder -> floci.glueProperties().forEach(builder::addHiveProperty))
+                .build();
         queryRunner.execute("CREATE SCHEMA " + testSchema);
         glueStats = getConnectorService(queryRunner, GlueHiveMetastore.class).getStats();
         glueClient = closeAfterClass(floci.createGlueClient());

@@ -17,7 +17,7 @@ import com.google.common.collect.ImmutableMap;
 import io.trino.plugin.base.util.UncheckedCloseable;
 import io.trino.plugin.hive.BaseS3AndGlueTest;
 import io.trino.plugin.hive.FlociS3AndGlue;
-import io.trino.plugin.hive.metastore.glue.GlueHiveMetastoreConfig;
+import io.trino.plugin.hive.metastore.glue.GlueHiveMetastore;
 import io.trino.plugin.iceberg.IcebergQueryRunner;
 import io.trino.plugin.iceberg.SchemaInitializer;
 import io.trino.testing.QueryRunner;
@@ -47,7 +47,7 @@ public abstract class BaseIcebergS3AndGlue
     protected QueryRunner createQueryRunner()
             throws Exception
     {
-        metastore = createTestingGlueHiveMetastore(URI.create(schemaPath()), this::closeAfterClass, false, this::configureGlueHiveMetastore);
+        metastore = createGlueHiveMetastore();
         return IcebergQueryRunner.builder()
                 .setIcebergProperties(ImmutableMap.<String, String>builder()
                         .put("iceberg.catalog.type", "glue")
@@ -67,7 +67,10 @@ public abstract class BaseIcebergS3AndGlue
         return Map.of();
     }
 
-    protected void configureGlueHiveMetastore(GlueHiveMetastoreConfig config) {}
+    protected GlueHiveMetastore createGlueHiveMetastore()
+    {
+        return createTestingGlueHiveMetastore(URI.create(schemaPath()), this::closeAfterClass);
+    }
 
     protected final FlociS3AndGlue floci()
     {

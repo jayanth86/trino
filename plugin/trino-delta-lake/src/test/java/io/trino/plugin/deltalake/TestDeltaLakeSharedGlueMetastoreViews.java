@@ -14,22 +14,19 @@
 package io.trino.plugin.deltalake;
 
 import io.trino.metastore.HiveMetastore;
-import io.trino.plugin.hive.FlociS3AndGlueTestSupport;
+import io.trino.plugin.hive.FlociS3AndGlue;
 
 import java.nio.file.Path;
-
-import static io.trino.plugin.hive.metastore.glue.TestingGlueHiveMetastore.createTestingGlueHiveMetastore;
 
 public class TestDeltaLakeSharedGlueMetastoreViews
         extends BaseDeltaLakeSharedMetastoreViewsTest
 {
-    private FlociS3AndGlueTestSupport floci;
+    private FlociS3AndGlue floci;
 
     @Override
     protected HiveMetastore createTestMetastore(Path dataDirectory)
     {
-        floci = closeAfterClass(new FlociS3AndGlueTestSupport());
-        floci.start();
-        return createTestingGlueHiveMetastore(dataDirectory.toUri(), this::closeAfterClass, false, floci::configureGlueHiveMetastore);
+        floci = closeAfterClass(new FlociS3AndGlue());
+        return floci.createGlueHiveMetastore(dataDirectory.toUri(), this::closeAfterClass, false);
     }
 }
