@@ -879,7 +879,7 @@
         </profile>
 
         <profile>
-            <id>avro</id>
+            <id>floci-and-avro</id>
             <build>
                 <plugins>
                     <plugin>
