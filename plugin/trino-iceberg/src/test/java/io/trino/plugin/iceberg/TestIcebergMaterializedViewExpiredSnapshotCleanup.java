@@ -49,7 +49,6 @@ import static io.trino.metastore.TableInfo.ICEBERG_MATERIALIZED_VIEW_COMMENT;
 import static io.trino.plugin.hive.HiveMetadata.TRINO_CREATED_BY;
 import static io.trino.plugin.hive.TableType.VIRTUAL_VIEW;
 import static io.trino.plugin.hive.ViewReaderUtil.PRESTO_VIEW_FLAG;
-import static io.trino.plugin.iceberg.FlociIcebergTestUtils.copyResources;
 import static io.trino.plugin.iceberg.IcebergMaterializedViewDefinition.encodeMaterializedViewData;
 import static io.trino.plugin.iceberg.IcebergQueryRunner.ICEBERG_CATALOG;
 import static io.trino.plugin.iceberg.IcebergTestUtils.SESSION;
@@ -108,7 +107,7 @@ public class TestIcebergMaterializedViewExpiredSnapshotCleanup
         String sourceTableName = "source_table";
         String materializedViewName = "materialized_view";
 
-        copyResources(floci, format("iceberg/%s", RESOURCE_DIRECTORY), BUCKET_NAME, RESOURCE_DIRECTORY);
+        floci.copyResources(format("iceberg/%s", RESOURCE_DIRECTORY), BUCKET_NAME, RESOURCE_DIRECTORY);
         getQueryRunner().execute(format("CALL system.register_table(CURRENT_SCHEMA, '%s', '%s')", sourceTableName, format("%s/source_table", S3_LOCATION_PREFIX)));
         assertQuery(format("SELECT * FROM %s", sourceTableName), "VALUES 4");
 

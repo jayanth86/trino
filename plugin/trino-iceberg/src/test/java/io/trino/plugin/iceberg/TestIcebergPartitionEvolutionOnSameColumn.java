@@ -21,7 +21,6 @@ import io.trino.testing.sql.TestTable;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Test;
 
-import static io.trino.plugin.iceberg.FlociIcebergTestUtils.copyResources;
 import static io.trino.plugin.iceberg.IcebergQueryRunner.ICEBERG_CATALOG;
 import static io.trino.testing.TestingNames.randomNameSuffix;
 import static io.trino.testing.containers.FlociContainer.FLOCI_ACCESS_KEY;
@@ -134,7 +133,7 @@ public class TestIcebergPartitionEvolutionOnSameColumn
     {
         String tableName = "test_iceberg_partition_evolution_" + randomNameSuffix();
 
-        copyResources(floci, "iceberg/conflict_truncate", BUCKET_NAME, "conflict_truncate");
+        floci.copyResources("iceberg/conflict_truncate", BUCKET_NAME, "conflict_truncate");
         assertUpdate(format(
                 "CALL system.register_table(CURRENT_SCHEMA, '%s', '%s')",
                 tableName,

@@ -20,7 +20,6 @@ import io.trino.testing.containers.FlociContainer;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Test;
 
-import static io.trino.plugin.iceberg.FlociIcebergTestUtils.copyResources;
 import static io.trino.testing.containers.FlociContainer.FLOCI_ACCESS_KEY;
 import static io.trino.testing.containers.FlociContainer.FLOCI_REGION;
 import static io.trino.testing.containers.FlociContainer.FLOCI_SECRET_KEY;
@@ -65,9 +64,9 @@ public class TestIcebergInvalidCompressionCodecs
                                 .buildOrThrow())
                 .build();
 
-        copyResources(floci, "iceberg/invalid_compression_codec/%s".formatted(AVRO_TABLE_NAME), BUCKET_NAME, AVRO_TABLE_NAME);
-        copyResources(floci, "iceberg/invalid_compression_codec/%s".formatted(PARQUET_TABLE_NAME), BUCKET_NAME, PARQUET_TABLE_NAME);
-        copyResources(floci, "iceberg/invalid_compression_codec/%s".formatted(ORC_TABLE_NAME), BUCKET_NAME, ORC_TABLE_NAME);
+        floci.copyResources("iceberg/invalid_compression_codec/%s".formatted(AVRO_TABLE_NAME), BUCKET_NAME, AVRO_TABLE_NAME);
+        floci.copyResources("iceberg/invalid_compression_codec/%s".formatted(PARQUET_TABLE_NAME), BUCKET_NAME, PARQUET_TABLE_NAME);
+        floci.copyResources("iceberg/invalid_compression_codec/%s".formatted(ORC_TABLE_NAME), BUCKET_NAME, ORC_TABLE_NAME);
         return queryRunner;
     }
 

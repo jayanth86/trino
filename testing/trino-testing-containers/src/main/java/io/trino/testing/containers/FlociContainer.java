@@ -13,22 +13,31 @@
  */
 package io.trino.testing.containers;
 
+import com.google.common.reflect.ClassPath;
 import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.containers.wait.strategy.Wait;
 import org.testcontainers.utility.DockerImageName;
 import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
 import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
 import software.amazon.awssdk.awscore.client.builder.AwsClientBuilder;
+import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.S3ClientBuilder;
+import software.amazon.awssdk.services.s3.model.S3Object;
 
+import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.net.URI;
+import java.util.List;
+import java.util.regex.Pattern;
+
+import static java.util.regex.Matcher.quoteReplacement;
 
 public final class FlociContainer
         extends GenericContainer<FlociContainer>
 {
-    public static final String FLOCI_IMAGE = "floci/floci:1.5.22";
+    public static final String FLOCI_IMAGE = "floci/floci:1.5.25";
     public static final String FLOCI_ACCESS_KEY = "test";
     public static final String FLOCI_SECRET_KEY = "test";
     public static final String FLOCI_REGION = "us-east-1";
@@ -67,6 +76,72 @@ public final class FlociContainer
     {
         try (S3Client s3 = createS3Client()) {
             s3.createBucket(builder -> builder.bucket(bucketName));
+        }
+    }
+
+    public void putObject(String bucketName, byte[] contents, String key)
+    {
+        try (S3Client s3 = createS3Client()) {
+            s3.putObject(
+                    builder -> builder.bucket(bucketName).key(key),
+                    RequestBody.fromBytes(contents));
+        }
+    }
+
+    public void copyResources(String resourcePath, String bucketName, String target)
+    {
+        try (S3Client s3 = createS3Client()) {
+            for (ClassPath.ResourceInfo resourceInfo : ClassPath.from(getClass().getClassLoader()).getResources()) {
+                if (resourceInfo.getResourceName().startsWith(resourcePath)) {
+                    String fileName = resourceInfo.getResourceName().replaceFirst("^" + Pattern.quote(resourcePath), quoteReplacement(target));
+                    s3.putObject(
+                            builder -> builder.bucket(bucketName).key(fileName),
+                            RequestBody.fromBytes(resourceInfo.asByteSource().read()));
+                }
+            }
+        }
+        catch (IOException e) {
+            throw new UncheckedIOException(e);
+        }
+    }
+
+    public List<String> listObjects(String bucketName, String prefix)
+    {
+        try (S3Client s3 = createS3Client()) {
+            return s3.listObjectsV2Paginator(builder -> builder.bucket(bucketName).prefix(prefix))
+                    .contents()
+                    .stream()
+                    .map(S3Object::key)
+                    .toList();
+        }
+    }
+
+    public void copyObject(String sourceBucketName, String sourceKey, String destinationBucketName, String destinationKey)
+    {
+        try (S3Client s3 = createS3Client()) {
+            s3.copyObject(builder -> builder
+                    .sourceBucket(sourceBucketName)
+                    .sourceKey(sourceKey)
+                    .destinationBucket(destinationBucketName)
+                    .destinationKey(destinationKey));
+        }
+    }
+
+    public void deleteObject(String bucketName, String key)
+    {
+        try (S3Client s3 = createS3Client()) {
+            s3.deleteObject(builder -> builder.bucket(bucketName).key(key));
+        }
+    }
+
+    public void deleteObjects(String bucketName, String prefix)
+    {
+        try (S3Client s3 = createS3Client()) {
+            s3.listObjectsV2Paginator(builder -> builder.bucket(bucketName).prefix(prefix))
+                    .contents()
+                    .stream()
+                    .map(S3Object::key)
+                    .forEach(key -> s3.deleteObject(builder -> builder.bucket(bucketName).key(key)));
         }
     }
 }

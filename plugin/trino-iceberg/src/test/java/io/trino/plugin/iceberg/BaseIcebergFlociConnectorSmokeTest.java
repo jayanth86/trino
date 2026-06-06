@@ -37,8 +37,6 @@ import static com.google.common.collect.ImmutableList.toImmutableList;
 import static io.trino.metastore.PrincipalPrivileges.NO_PRIVILEGES;
 import static io.trino.plugin.hive.TableType.EXTERNAL_TABLE;
 import static io.trino.plugin.hive.TestingThriftHiveMetastoreBuilder.testingThriftHiveMetastoreBuilder;
-import static io.trino.plugin.iceberg.FlociIcebergTestUtils.deleteObjects;
-import static io.trino.plugin.iceberg.FlociIcebergTestUtils.listObjects;
 import static io.trino.plugin.iceberg.IcebergTestUtils.getHiveMetastore;
 import static io.trino.plugin.iceberg.catalog.AbstractIcebergTableOperations.ICEBERG_METASTORE_STORAGE_FORMAT;
 import static io.trino.testing.TestingNames.randomNameSuffix;
@@ -133,10 +131,10 @@ public abstract class BaseIcebergFlociConnectorSmokeTest
         assertThat(location).doesNotContain("#");
 
         assertUpdate("CREATE TABLE " + tableName + " WITH (location='" + location + "') AS SELECT 1 col", 1);
-        List<String> dataFiles = listObjects(hiveFlociDataLake.getFloci(), bucketName, "%s/%s/data".formatted(schemaName, tableName));
+        List<String> dataFiles = hiveFlociDataLake.getFloci().listObjects(bucketName, "%s/%s/data".formatted(schemaName, tableName));
         assertThat(dataFiles).isNotEmpty().filteredOn(filePath -> filePath.contains("#")).isEmpty();
 
-        List<String> metadataFiles = listObjects(hiveFlociDataLake.getFloci(), bucketName, "%s/%s/metadata".formatted(schemaName, tableName));
+        List<String> metadataFiles = hiveFlociDataLake.getFloci().listObjects(bucketName, "%s/%s/metadata".formatted(schemaName, tableName));
         assertThat(metadataFiles).isNotEmpty().filteredOn(filePath -> filePath.contains("#")).isEmpty();
 
         // Verify ALTER TABLE succeeds https://github.com/trinodb/trino/issues/14552
@@ -225,7 +223,7 @@ public abstract class BaseIcebergFlociConnectorSmokeTest
         assertUpdate("INSERT INTO " + tableName + " VALUES ('two', 2)", 1);
         assertThat(query("SELECT * FROM " + tableName)).matches("VALUES (VARCHAR 'one', 1), (VARCHAR 'two', 2)");
 
-        List<String> initialMetadataFiles = listObjects(hiveFlociDataLake.getFloci(), bucketName, "%s/%s/metadata".formatted(schemaName, tableName));
+        List<String> initialMetadataFiles = hiveFlociDataLake.getFloci().listObjects(bucketName, "%s/%s/metadata".formatted(schemaName, tableName));
         assertThat(initialMetadataFiles).isNotEmpty();
 
         List<Long> initialSnapshots = getSnapshotIds(tableName);
@@ -233,7 +231,7 @@ public abstract class BaseIcebergFlociConnectorSmokeTest
 
         assertQuerySucceeds(sessionWithShortRetentionUnlocked, "ALTER TABLE " + tableName + " EXECUTE EXPIRE_SNAPSHOTS (retention_threshold => '0s')");
 
-        List<String> updatedMetadataFiles = listObjects(hiveFlociDataLake.getFloci(), bucketName, "%s/%s/metadata".formatted(schemaName, tableName));
+        List<String> updatedMetadataFiles = hiveFlociDataLake.getFloci().listObjects(bucketName, "%s/%s/metadata".formatted(schemaName, tableName));
         assertThat(updatedMetadataFiles).isNotEmpty().hasSizeLessThan(initialMetadataFiles.size());
 
         List<Long> updatedSnapshots = getSnapshotIds(tableName);
@@ -364,7 +362,7 @@ public abstract class BaseIcebergFlociConnectorSmokeTest
         String prefix = "s3://" + bucketName + "/";
         String key = location.substring(prefix.length());
 
-        deleteObjects(hiveFlociDataLake.getFloci(), bucketName, key);
-        assertThat(listObjects(hiveFlociDataLake.getFloci(), bucketName, key)).isEmpty();
+        hiveFlociDataLake.getFloci().deleteObjects(bucketName, key);
+        assertThat(hiveFlociDataLake.getFloci().listObjects(bucketName, key)).isEmpty();
     }
 }

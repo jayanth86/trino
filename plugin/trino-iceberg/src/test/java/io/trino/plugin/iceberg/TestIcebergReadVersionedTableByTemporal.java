@@ -23,7 +23,6 @@ import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
 
-import static io.trino.plugin.iceberg.FlociIcebergTestUtils.copyResources;
 import static io.trino.plugin.iceberg.IcebergQueryRunner.ICEBERG_CATALOG;
 import static io.trino.testing.TestingNames.randomNameSuffix;
 import static io.trino.testing.containers.FlociContainer.FLOCI_ACCESS_KEY;
@@ -78,7 +77,7 @@ public class TestIcebergReadVersionedTableByTemporal
     {
         String tableName = "test_iceberg_read_versioned_table_" + randomNameSuffix();
 
-        copyResources(floci, "iceberg/timetravel", BUCKET_NAME, "timetravel");
+        floci.copyResources("iceberg/timetravel", BUCKET_NAME, "timetravel");
         assertUpdate(format(
                 "CALL system.register_table(CURRENT_SCHEMA, '%s', '%s')",
                 tableName,

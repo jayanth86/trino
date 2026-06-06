@@ -26,7 +26,6 @@ import org.junit.jupiter.api.TestInstance;
 
 import java.util.List;
 
-import static io.trino.plugin.iceberg.FlociIcebergTestUtils.copyResources;
 import static io.trino.plugin.iceberg.IcebergQueryRunner.ICEBERG_CATALOG;
 import static io.trino.testing.MaterializedResult.resultBuilder;
 import static io.trino.testing.QueryAssertions.assertContains;
@@ -74,7 +73,7 @@ public class TestIcebergParquetWithBloomFiltersMixedCase
     @Override
     protected CatalogSchemaTableName createParquetTableWithBloomFilter(String columnName, List<Integer> testValues)
     {
-        copyResources(floci, "iceberg/mixed_case_bloom_filter", BUCKET_NAME, "mixed_case_bloom_filter");
+        floci.copyResources("iceberg/mixed_case_bloom_filter", BUCKET_NAME, "mixed_case_bloom_filter");
         String tableName = "test_iceberg_write_mixed_case_bloom_filter" + randomNameSuffix();
         assertUpdate(format(
                 "CALL system.register_table(CURRENT_SCHEMA, '%s', '%s')",
