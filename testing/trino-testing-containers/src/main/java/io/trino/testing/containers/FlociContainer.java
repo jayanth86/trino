@@ -58,9 +58,14 @@ public final class FlociContainer
         }
     }
 
+    public S3Client createS3Client()
+    {
+        return S3Client.builder().applyMutation(this::updateClient).build();
+    }
+
     public void createBucket(String bucketName)
     {
-        try (S3Client s3 = S3Client.builder().applyMutation(this::updateClient).build()) {
+        try (S3Client s3 = createS3Client()) {
             s3.createBucket(builder -> builder.bucket(bucketName));
         }
     }
