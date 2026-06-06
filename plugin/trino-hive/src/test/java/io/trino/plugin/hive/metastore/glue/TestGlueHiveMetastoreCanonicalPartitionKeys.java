@@ -22,6 +22,7 @@ import io.trino.metastore.PartitionStatistics;
 import io.trino.metastore.PartitionWithStatistics;
 import io.trino.metastore.Table;
 import io.trino.plugin.base.util.AutoCloseableCloser;
+import io.trino.plugin.hive.FlociS3AndGlue;
 import io.trino.spi.predicate.Range;
 import io.trino.spi.predicate.TupleDomain;
 import io.trino.spi.type.DateType;
@@ -67,13 +68,15 @@ final class TestGlueHiveMetastoreCanonicalPartitionKeys
 
     private final AutoCloseableCloser closer = AutoCloseableCloser.create();
     private final Path tempDir;
+    private final FlociS3AndGlue floci;
     private final GlueHiveMetastore metastore;
 
     TestGlueHiveMetastoreCanonicalPartitionKeys()
             throws IOException
     {
         tempDir = createTempDirectory("test");
-        metastore = createTestingGlueHiveMetastore(tempDir, closer::register, true);
+        floci = closer.register(new FlociS3AndGlue());
+        metastore = createTestingGlueHiveMetastore(tempDir.toUri(), closer::register, true, floci::configureGlueHiveMetastore);
     }
 
     @BeforeAll

@@ -13,12 +13,12 @@
  */
 package io.trino.plugin.hive.metastore.glue;
 
+import io.trino.plugin.hive.FlociS3AndGlue;
 import io.trino.plugin.hive.HiveQueryRunner;
 import io.trino.testing.AbstractTestQueryFramework;
 import io.trino.testing.DistributedQueryRunner;
 import io.trino.testing.QueryRunner;
 import io.trino.testing.sql.TestTable;
-import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Test;
 import software.amazon.awssdk.services.glue.GlueClient;
 import software.amazon.awssdk.services.glue.model.TableVersion;
@@ -34,13 +34,17 @@ final class TestGlueHiveMetastoreSkipArchive
         extends AbstractTestQueryFramework
 {
     private final String testSchema = "test_schema_" + randomNameSuffix();
-    private final GlueClient glueClient = GlueClient.create();
+    private FlociS3AndGlue floci;
+    private GlueClient glueClient;
 
     @Override
     protected QueryRunner createQueryRunner()
             throws Exception
     {
-        DistributedQueryRunner queryRunner = HiveQueryRunner.builder(testSessionBuilder()
+        floci = closeAfterClass(new FlociS3AndGlue());
+        glueClient = closeAfterClass(floci.createGlueClient());
+
+        HiveQueryRunner.Builder<?> builder = HiveQueryRunner.builder(testSessionBuilder()
                         .setCatalog("hive")
                         .setSchema(testSchema)
                         .build())
@@ -48,16 +52,12 @@ final class TestGlueHiveMetastoreSkipArchive
                 .addHiveProperty("hive.metastore.glue.default-warehouse-dir", "local:///glue")
                 .addHiveProperty("hive.security", "allow-all")
                 .addHiveProperty("hive.metastore.glue.skip-archive", "true")
-                .setCreateTpchSchemas(false)
-                .build();
+                .setCreateTpchSchemas(false);
+        floci.glueProperties().forEach(builder::addHiveProperty);
+
+        DistributedQueryRunner queryRunner = builder.build();
         queryRunner.execute("CREATE SCHEMA " + testSchema);
         return queryRunner;
-    }
-
-    @AfterAll
-    void cleanUpSchema()
-    {
-        getQueryRunner().execute("DROP SCHEMA " + testSchema + " CASCADE");
     }
 
     @Test

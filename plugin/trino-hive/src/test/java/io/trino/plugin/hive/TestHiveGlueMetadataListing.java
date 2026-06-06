@@ -38,7 +38,6 @@ import java.nio.file.Path;
 import java.util.List;
 import java.util.Set;
 
-import static io.trino.plugin.hive.metastore.glue.GlueMetastoreModule.createGlueClient;
 import static io.trino.plugin.hive.metastore.glue.TestingGlueHiveMetastore.createTestingGlueHiveMetastore;
 import static io.trino.plugin.tpch.TpchMetadata.TINY_SCHEMA_NAME;
 import static io.trino.testing.QueryAssertions.copyTpchTables;
@@ -57,6 +56,7 @@ public class TestHiveGlueMetadataListing
     private static final Logger LOG = Logger.get(TestHiveGlueMetadataListing.class);
     private static final String HIVE_CATALOG = "hive";
     private final String tpchSchema = "test_tpch_schema_" + randomNameSuffix();
+    private FlociS3AndGlue floci;
     private GlueHiveMetastore glueMetastore;
 
     @Override
@@ -76,7 +76,9 @@ public class TestHiveGlueMetadataListing
         Path dataDirectory = queryRunner.getCoordinator().getBaseDataDir().resolve("hive_data");
         dataDirectory.toFile().deleteOnExit();
 
-        this.glueMetastore = createTestingGlueHiveMetastore(dataDirectory, this::closeAfterClass);
+        floci = closeAfterClass(new FlociS3AndGlue());
+
+        this.glueMetastore = createTestingGlueHiveMetastore(dataDirectory.toUri(), this::closeAfterClass, false, floci::configureGlueHiveMetastore);
         queryRunner.installPlugin(new TestingHivePlugin(dataDirectory, glueMetastore));
         queryRunner.createCatalog(HIVE_CATALOG, "hive", ImmutableMap.of("fs.hadoop.enabled", "true"));
 
@@ -169,7 +171,8 @@ public class TestHiveGlueMetadataListing
     {
         GlueHiveMetastoreConfig glueConfig = new GlueHiveMetastoreConfig()
                 .setDefaultWarehouseDir(dataDirectory.toString());
-        try (GlueClient glueClient = createGlueClient(glueConfig, ImmutableSet.of())) {
+        floci.configureGlueHiveMetastore(glueConfig);
+        try (GlueClient glueClient = floci.createGlueClient()) {
             for (TableInput tableInput : tablesInput) {
                 CreateTableRequest createTableRequest = CreateTableRequest.builder()
                         .databaseName(tpchSchema)

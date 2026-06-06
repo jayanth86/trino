@@ -16,6 +16,7 @@ package io.trino.plugin.hive;
 import com.google.common.collect.ImmutableMap;
 import io.trino.plugin.hive.metastore.glue.GlueHiveMetastoreConfig;
 import io.trino.testing.containers.FlociContainer;
+import software.amazon.awssdk.services.glue.GlueClient;
 import software.amazon.awssdk.services.s3.S3Client;
 
 import java.util.Map;
@@ -27,7 +28,6 @@ public final class FlociS3AndGlue
 
     public FlociS3AndGlue()
     {
-        floci.start();
     }
 
     public void createBucket(String bucketName)
@@ -42,13 +42,27 @@ public final class FlociS3AndGlue
                 .build();
     }
 
-    public Map<String, String> s3AndGlueProperties()
+    public GlueClient createGlueClient()
+    {
+        return GlueClient.builder()
+                .applyMutation(floci::updateClient)
+                .build();
+    }
+
+    public Map<String, String> glueProperties()
     {
         return ImmutableMap.<String, String>builder()
                 .put("hive.metastore.glue.endpoint-url", floci.endpoint().toString())
                 .put("hive.metastore.glue.region", FlociContainer.FLOCI_REGION)
                 .put("hive.metastore.glue.aws-access-key", FlociContainer.FLOCI_ACCESS_KEY)
                 .put("hive.metastore.glue.aws-secret-key", FlociContainer.FLOCI_SECRET_KEY)
+                .buildOrThrow();
+    }
+
+    public Map<String, String> s3AndGlueProperties()
+    {
+        return ImmutableMap.<String, String>builder()
+                .putAll(glueProperties())
                 .put("s3.region", FlociContainer.FLOCI_REGION)
                 .put("s3.endpoint", floci.endpoint().toString())
                 .put("s3.aws-access-key", FlociContainer.FLOCI_ACCESS_KEY)

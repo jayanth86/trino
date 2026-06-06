@@ -15,6 +15,7 @@ package io.trino.plugin.hive.metastore.glue;
 
 import io.trino.metastore.HiveMetastore;
 import io.trino.plugin.base.util.AutoCloseableCloser;
+import io.trino.plugin.hive.FlociS3AndGlue;
 import io.trino.plugin.hive.metastore.AbstractTestHiveMetastore;
 import org.junit.jupiter.api.AfterAll;
 
@@ -31,13 +32,15 @@ final class TestGlueHiveMetastore
 {
     private final AutoCloseableCloser closer = AutoCloseableCloser.create();
     private final Path tempDir;
+    private final FlociS3AndGlue floci;
     private final GlueHiveMetastore metastore;
 
     TestGlueHiveMetastore()
             throws IOException
     {
         tempDir = createTempDirectory("test");
-        metastore = createTestingGlueHiveMetastore(tempDir, closer::register);
+        floci = closer.register(new FlociS3AndGlue());
+        metastore = createTestingGlueHiveMetastore(tempDir.toUri(), closer::register, false, floci::configureGlueHiveMetastore);
     }
 
     @AfterAll

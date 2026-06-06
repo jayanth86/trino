@@ -18,13 +18,13 @@ import com.google.common.collect.Multiset;
 import io.trino.Session;
 import io.trino.filesystem.Location;
 import io.trino.filesystem.TrinoFileSystemFactory;
+import io.trino.plugin.hive.FlociS3AndGlue;
 import io.trino.plugin.hive.HiveQueryRunner;
 import io.trino.spi.security.ConnectorIdentity;
 import io.trino.testing.AbstractTestQueryFramework;
 import io.trino.testing.DistributedQueryRunner;
 import io.trino.testing.QueryRunner;
 import org.intellij.lang.annotations.Language;
-import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.parallel.Execution;
 import software.amazon.awssdk.services.glue.GlueClient;
@@ -51,6 +51,7 @@ public class TestCachedHiveGlueMetastore
     private static final int MAX_PREFIXES_COUNT = 5;
     private final String testSchema = "test_schema_" + randomNameSuffix();
 
+    private FlociS3AndGlue floci;
     private GlueMetastoreStats glueStats;
     private GlueClient glueClient;
 
@@ -58,7 +59,9 @@ public class TestCachedHiveGlueMetastore
     protected QueryRunner createQueryRunner()
             throws Exception
     {
-        DistributedQueryRunner queryRunner = HiveQueryRunner.builder(testSessionBuilder()
+        floci = closeAfterClass(new FlociS3AndGlue());
+
+        HiveQueryRunner.Builder<?> builder = HiveQueryRunner.builder(testSessionBuilder()
                         .setCatalog("hive")
                         .setSchema(testSchema)
                         .build())
@@ -68,18 +71,14 @@ public class TestCachedHiveGlueMetastore
                 .addHiveProperty("hive.metastore-cache-ttl", "1d")
                 .addHiveProperty("hive.metastore-refresh-interval", "1h")
                 .addHiveProperty("hive.security", "allow-all")
-                .setCreateTpchSchemas(false)
-                .build();
+                .setCreateTpchSchemas(false);
+        floci.glueProperties().forEach(builder::addHiveProperty);
+
+        DistributedQueryRunner queryRunner = builder.build();
         queryRunner.execute("CREATE SCHEMA " + testSchema);
         glueStats = getConnectorService(queryRunner, GlueHiveMetastore.class).getStats();
-        glueClient = closeAfterClass(GlueClient.create());
+        glueClient = closeAfterClass(floci.createGlueClient());
         return queryRunner;
-    }
-
-    @AfterAll
-    public void cleanUpSchema()
-    {
-        getQueryRunner().execute("DROP SCHEMA " + testSchema + " CASCADE");
     }
 
     @Test
