@@ -21,6 +21,7 @@ import io.airlift.log.Logger;
 import io.trino.Session;
 import io.trino.execution.Failure;
 import io.trino.metastore.Database;
+import io.trino.plugin.hive.FlociS3AndGlue;
 import io.trino.plugin.hive.metastore.glue.ForGlueHiveMetastore;
 import io.trino.plugin.hive.metastore.glue.GlueHiveMetastore;
 import io.trino.plugin.iceberg.TestingIcebergPlugin;
@@ -50,11 +51,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.TestInstance.Lifecycle.PER_CLASS;
 
-/*
- * The test currently uses AWS Default Credential Provider Chain,
- * See https://docs.aws.amazon.com/sdk-for-java/latest/developer-guide/credentials-chain.html#credentials-default
- * on ways to set your AWS credentials which will be needed to run this test.
- */
 @TestInstance(PER_CLASS)
 public class TestIcebergGlueTableOperationsInsertFailure
         extends AbstractTestQueryFramework
@@ -66,6 +62,7 @@ public class TestIcebergGlueTableOperationsInsertFailure
     private final String schemaName = "test_iceberg_glue_" + randomNameSuffix();
 
     private GlueHiveMetastore glueHiveMetastore;
+    private FlociS3AndGlue floci;
 
     @Override
     protected QueryRunner createQueryRunner()
@@ -79,14 +76,16 @@ public class TestIcebergGlueTableOperationsInsertFailure
 
         Path dataDirectory = Files.createTempDirectory("iceberg_data");
         dataDirectory.toFile().deleteOnExit();
+        floci = closeAfterClass(new FlociS3AndGlue());
 
         queryRunner.installPlugin(new TestingIcebergPlugin(dataDirectory, () -> Optional.of(new TestingGlueCatalogModule())));
         queryRunner.createCatalog(ICEBERG_CATALOG, "iceberg", ImmutableMap.<String, String>builder()
                 .put("iceberg.catalog.type", "glue")
                 .put("fs.hadoop.enabled", "true")
+                .putAll(floci.glueProperties())
                 .buildOrThrow());
 
-        glueHiveMetastore = createTestingGlueHiveMetastore(dataDirectory, this::closeAfterClass);
+        glueHiveMetastore = createTestingGlueHiveMetastore(dataDirectory.toUri(), this::closeAfterClass, false, floci::configureGlueHiveMetastore);
 
         Database database = Database.builder()
                 .setDatabaseName(schemaName)

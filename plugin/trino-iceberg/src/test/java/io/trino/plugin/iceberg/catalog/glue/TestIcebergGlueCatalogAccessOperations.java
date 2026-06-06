@@ -14,11 +14,13 @@
 package io.trino.plugin.iceberg.catalog.glue;
 
 import com.google.common.collect.HashMultiset;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableMultiset;
 import com.google.common.collect.Multiset;
 import io.airlift.log.Logger;
 import io.opentelemetry.sdk.trace.data.SpanData;
 import io.trino.Session;
+import io.trino.plugin.hive.FlociS3AndGlue;
 import io.trino.plugin.hive.metastore.glue.GlueMetastoreMethod;
 import io.trino.plugin.hive.metastore.glue.GlueMetastoreStats;
 import io.trino.plugin.iceberg.IcebergConnector;
@@ -30,7 +32,6 @@ import io.trino.testing.AbstractTestQueryFramework;
 import io.trino.testing.DistributedQueryRunner;
 import io.trino.testing.QueryRunner;
 import org.intellij.lang.annotations.Language;
-import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.parallel.Execution;
 
@@ -72,11 +73,6 @@ import static java.util.stream.Collectors.toCollection;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.parallel.ExecutionMode.SAME_THREAD;
 
-/*
- * The test currently uses AWS Default Credential Provider Chain,
- * See https://docs.aws.amazon.com/sdk-for-java/latest/developer-guide/credentials-chain.html#credentials-default
- * on ways to set your AWS credentials which will be needed to run this test.
- */
 @Execution(SAME_THREAD)
 public class TestIcebergGlueCatalogAccessOperations
         extends AbstractTestQueryFramework
@@ -86,26 +82,25 @@ public class TestIcebergGlueCatalogAccessOperations
     private static final int MAX_PREFIXES_COUNT = 5;
     private final String testSchema = "test_schema_" + randomNameSuffix();
 
+    private FlociS3AndGlue floci;
     private GlueMetastoreStats glueStats;
 
     @Override
     protected QueryRunner createQueryRunner()
             throws Exception
     {
+        floci = closeAfterClass(new FlociS3AndGlue());
         DistributedQueryRunner queryRunner = IcebergQueryRunner.builder(testSchema)
                 .addCoordinatorProperty("optimizer.experimental-max-prefetched-information-schema-prefixes", Integer.toString(MAX_PREFIXES_COUNT))
-                .addIcebergProperty("iceberg.catalog.type", "glue")
-                .addIcebergProperty("hive.metastore.glue.default-warehouse-dir", "local:///glue")
+                .setIcebergProperties(ImmutableMap.<String, String>builder()
+                        .put("iceberg.catalog.type", "glue")
+                        .put("hive.metastore.glue.default-warehouse-dir", "local:///glue")
+                        .putAll(floci.glueProperties())
+                        .buildOrThrow())
                 .setSchemaInitializer(SchemaInitializer.builder().withSchemaName(testSchema).build())
                 .build();
         glueStats = ((IcebergConnector) queryRunner.getCoordinator().getConnector("iceberg")).getInjector().getInstance(GlueMetastoreStats.class);
         return queryRunner;
-    }
-
-    @AfterAll
-    public void cleanUpSchema()
-    {
-        getQueryRunner().execute("DROP SCHEMA " + testSchema);
     }
 
     @Test
