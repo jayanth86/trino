@@ -16,10 +16,8 @@ package io.trino.plugin.hive.containers;
 import io.trino.plugin.base.util.AutoCloseableCloser;
 import io.trino.testing.containers.FlociContainer;
 import org.testcontainers.containers.Network;
-import software.amazon.awssdk.services.s3.S3Client;
 
 import java.net.URI;
-import java.util.List;
 
 import static com.google.common.base.Preconditions.checkState;
 import static io.trino.plugin.hive.containers.HiveFlociDataLake.State.INITIAL;
@@ -67,20 +65,9 @@ public abstract class HiveFlociDataLake
         return network;
     }
 
-    public FlociContainer getFloci()
+    public FlociContainer floci()
     {
         return floci;
-    }
-
-    public List<String> listFiles(String targetDirectory)
-    {
-        try (S3Client s3 = floci.createS3Client()) {
-            return s3.listObjectsV2Paginator(builder -> builder.bucket(bucketName).prefix(targetDirectory))
-                    .contents()
-                    .stream()
-                    .map(object -> object.key())
-                    .toList();
-        }
     }
 
     public abstract String runOnHive(String sql);
