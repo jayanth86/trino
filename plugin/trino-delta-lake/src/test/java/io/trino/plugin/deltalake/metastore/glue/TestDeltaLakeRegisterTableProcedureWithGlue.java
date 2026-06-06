@@ -15,6 +15,7 @@ package io.trino.plugin.deltalake.metastore.glue;
 
 import io.trino.plugin.deltalake.BaseDeltaLakeRegisterTableProcedureTest;
 import io.trino.plugin.deltalake.DeltaLakeQueryRunner;
+import io.trino.plugin.hive.FlociS3AndGlueTestSupport;
 import io.trino.plugin.hive.metastore.glue.GlueHiveMetastore;
 import io.trino.testing.QueryRunner;
 import org.junit.jupiter.api.AfterAll;
@@ -25,7 +26,6 @@ import java.nio.file.Path;
 import static com.google.common.io.MoreFiles.deleteRecursively;
 import static com.google.common.io.RecursiveDeleteOption.ALLOW_INSECURE;
 import static io.trino.plugin.hive.metastore.glue.TestingGlueHiveMetastore.createTestingGlueHiveMetastore;
-import static io.trino.testing.SystemEnvironmentUtils.requireEnv;
 import static io.trino.testing.TestingNames.randomNameSuffix;
 
 public class TestDeltaLakeRegisterTableProcedureWithGlue
@@ -33,6 +33,7 @@ public class TestDeltaLakeRegisterTableProcedureWithGlue
 {
     private GlueHiveMetastore metastore;
     private String schema;
+    private FlociS3AndGlueTestSupport floci;
 
     @Override
     protected QueryRunner createQueryRunner()
@@ -40,12 +41,14 @@ public class TestDeltaLakeRegisterTableProcedureWithGlue
     {
         Path warehouseDir = Files.createTempDirectory("warehouse-dir");
         closeAfterClass(() -> deleteRecursively(warehouseDir, ALLOW_INSECURE));
-        metastore = createTestingGlueHiveMetastore(warehouseDir, this::closeAfterClass);
+        floci = closeAfterClass(new FlociS3AndGlueTestSupport());
+        floci.start();
+        metastore = createTestingGlueHiveMetastore(warehouseDir.toUri(), this::closeAfterClass, false, floci::configureGlueHiveMetastore);
         schema = "test_delta_lake_register_table" + randomNameSuffix();
         return DeltaLakeQueryRunner.builder(schema)
                 .addDeltaProperty("hive.metastore", "glue")
-                .addDeltaProperty("hive.metastore.glue.region", requireEnv("AWS_REGION"))
                 .addDeltaProperty("hive.metastore.glue.default-warehouse-dir", warehouseDir.toUri().toString())
+                .addDeltaProperties(floci.glueProperties())
                 .addDeltaProperty("delta.unique-table-location", "true")
                 .addDeltaProperty("delta.register-table-procedure.enabled", "true")
                 .build();

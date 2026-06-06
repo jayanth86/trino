@@ -13,6 +13,7 @@
  */
 package io.trino.plugin.deltalake;
 
+import io.trino.plugin.hive.FlociS3AndGlueTestSupport;
 import io.trino.plugin.hive.metastore.glue.GlueHiveMetastore;
 import io.trino.testing.QueryRunner;
 import org.junit.jupiter.api.AfterAll;
@@ -24,7 +25,6 @@ import java.nio.file.Path;
 import static com.google.common.io.MoreFiles.deleteRecursively;
 import static com.google.common.io.RecursiveDeleteOption.ALLOW_INSECURE;
 import static io.trino.plugin.hive.metastore.glue.TestingGlueHiveMetastore.createTestingGlueHiveMetastore;
-import static io.trino.testing.SystemEnvironmentUtils.requireEnv;
 import static io.trino.testing.TestingNames.randomNameSuffix;
 import static org.junit.jupiter.api.TestInstance.Lifecycle.PER_CLASS;
 
@@ -34,6 +34,7 @@ public class TestDeltaLakeTableWithCustomLocationUsingGlueMetastore
 {
     private GlueHiveMetastore metastore;
     private String schema;
+    private FlociS3AndGlueTestSupport floci;
 
     @Override
     protected QueryRunner createQueryRunner()
@@ -41,12 +42,14 @@ public class TestDeltaLakeTableWithCustomLocationUsingGlueMetastore
     {
         Path warehouseDir = Files.createTempDirectory("warehouse-dir");
         closeAfterClass(() -> deleteRecursively(warehouseDir, ALLOW_INSECURE));
-        metastore = createTestingGlueHiveMetastore(warehouseDir, this::closeAfterClass);
+        floci = closeAfterClass(new FlociS3AndGlueTestSupport());
+        floci.start();
+        metastore = createTestingGlueHiveMetastore(warehouseDir.toUri(), this::closeAfterClass, false, floci::configureGlueHiveMetastore);
         schema = "test_tables_with_custom_location" + randomNameSuffix();
         return DeltaLakeQueryRunner.builder(schema)
                 .addDeltaProperty("hive.metastore", "glue")
-                .addDeltaProperty("hive.metastore.glue.region", requireEnv("AWS_REGION"))
                 .addDeltaProperty("hive.metastore.glue.default-warehouse-dir", warehouseDir.toUri().toString())
+                .addDeltaProperties(floci.glueProperties())
                 .build();
     }
 
